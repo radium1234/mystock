@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/send_email.py:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "WebSearch:*",
+      "WebFetch:*"
+    ]
+  }
+}

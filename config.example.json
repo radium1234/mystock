@@ -1,0 +1,19 @@
+{
+  "email": {
+    "method": "smtp_password",
+    "smtp_server": "smtp.qq.com",
+    "smtp_port": 587,
+    "sender_email": "your-email@qq.com",
+    "recipient_email": "your-email@qq.com",
+    "password": "你的QQ邮箱16位授权码",
+    "use_outlook_com": false
+  },
+  "schedule": {
+    "time": "09:00,21:00",
+    "timezone": "Asia/Shanghai"
+  },
+  "research": {
+    "parallel_agents": 5,
+    "search_depth": "deep"
+  }
+}
