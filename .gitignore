@@ -1,6 +1,7 @@
-# === 敏感配置（API密钥、邮箱密码等） ===
+# === 敏感配置（API密钥、邮箱密码、持仓信息等） ===
 .env
 config.json
+profile.json
 
 # === Python ===
 __pycache__/

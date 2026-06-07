@@ -115,6 +115,22 @@
   .risk-col h4 { margin-bottom: 8px; font-size: 0.95em; }
   .risk-col li { font-size: 0.85em; margin: 4px 0; color: var(--sub); list-style: none; }
 
+  /* ===== 交易员仓位 ===== */
+  .portfolio-summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 12px 0 16px;
+  }
+  .portfolio-stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; text-align: center;
+  }
+  .portfolio-stat .num { font-size: 1.25em; font-weight: 700; color: var(--accent); }
+  .portfolio-stat .label { color: var(--sub); font-size: 0.82em; }
+  .portfolio-table td, .portfolio-table th { vertical-align: top; }
+  .action-buy { color: var(--bull); font-weight: 700; }
+  .action-sell { color: var(--bear); font-weight: 700; }
+  .action-hold { color: var(--neutral); font-weight: 700; }
+  .action-watch { color: #60a5fa; font-weight: 700; }
+
   /* ===== 操作启示 ===== */
   .playbook { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
   .play {
@@ -141,7 +157,7 @@
   footer { text-align: center; color: #555; font-size: 0.78em; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
 
   @media (max-width: 640px) {
-    .arena, .mini-arena, .risk-grid, .playbook { grid-template-columns: 1fr; }
+    .arena, .mini-arena, .risk-grid, .portfolio-summary, .playbook { grid-template-columns: 1fr; }
     body { padding: 12px; }
   }
 </style>
@@ -166,15 +182,9 @@
 <!-- ============================================================ -->
 <!-- 多空博弈台 -->
 <!-- ============================================================ -->
-<h2>📊 多空博弈台</h2>
+<h2>📊 多空博弈台 · 线索串联</h2>
+<p style="color:var(--sub);font-size:0.9em;margin-bottom:12px;">每市场 Bull vs Bear · 非显性关联 · 聪明钱布局 · 历史镜鉴 · 反身性思考</p>
 {{BULL_BEAR_ARENA}}
-
-<!-- ============================================================ -->
-<!-- 线索串联 -->
-<!-- ============================================================ -->
-<h2>🔗 线索串联 · 深度推演</h2>
-<p style="color:var(--sub);font-size:0.9em;margin-bottom:12px;">非显性关联 · 聪明钱布局 · 历史镜鉴 · 反身性思考</p>
-{{DOT_CONNECTING}}
 
 <!-- ============================================================ -->
 <!-- 前瞻催化剂与场景推演 -->
@@ -206,6 +216,13 @@
 <!-- ============================================================ -->
 <h2>⚠️ 风险矩阵</h2>
 {{RISK_MATRIX}}
+
+<!-- ============================================================ -->
+<!-- 交易员仓位 -->
+<!-- ============================================================ -->
+<h2>💼 交易员仓位 · 50万RMB模拟组合</h2>
+<p style="color:var(--sub);font-size:0.9em;margin-bottom:12px;">研报模拟组合，不构成投资建议。价格/汇率缺失时以目标权重和目标金额表达。</p>
+{{TRADER_PORTFOLIO}}
 
 <!-- ============================================================ -->
 <!-- 操作启示 -->

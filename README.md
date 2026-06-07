@@ -26,26 +26,30 @@
 
 ---
 
-## 🏗️ 引擎架构（v2.0）
+## 🏗️ 引擎架构（v3.0）
 
 ```
-scripts/run_deep_research.py          ← 主入口
+scripts/run_daily.cmd                 ← 手动/Windows 计划任务统一入口
+scripts/run_daily.ps1                 ← 外层编排器：逐个启动独立 claude --print 任务
 │
-├─ 🔍 第一层：信息采集（并行 5 agent）
-│  ├─ 板块深度搜索      → 半导体 + AI 产业链
-│  ├─ 个股深度搜索      → 所有关注标的
-│  ├─ 宏观 + 资金流向   → 美联储/央行/北向南向资金
-│  ├─ 大V推文抓取       → Grok + X API v2
-│  └─ 加密货币专项      → BTC/ETH 链上 + 情绪
+├─ 🔍 第一层：专业信息采集（6 个独立 Claude Code 任务，默认最多 3 个并行）
+│  ├─ 01-macro-master                 ← 宏观 regime + 全球资金流 + 特朗普政策信号
+│  ├─ 02-offshore-equity              ← 美股 + 港股/中概（合并 Mag 7/AI 估值）
+│  ├─ 03-a-share-master               ← A股 政策/资金/标的
+│  ├─ 04-semiconductor-chain          ← 半导体 + AI 产业链
+│  ├─ 05-crypto-master                ← BTC/ETH + 链上/衍生品/ETF
+│  └─ 06-influencer-sentiment         ← 大V 推文数据采集（仅采集，不分析）
 │
-├─ ⚔️ 第二层：深度推演（并行 3 agent）
-│  ├─ 多空博弈台         → 每市场 Bull vs Bear 对撞
-│  ├─ 线索串联 + 历史镜鉴 → 隐性关联 + 聪明钱推理
-│  └─ 催化剂场景推演     → 前瞻双场景沙盘
+├─ ⚔️ 第二层：深度推演（2 个独立 Claude Code 任务）
+│  ├─ 07-bull-bear-arena              ← 多空博弈台 + 线索串联/历史镜鉴（合并）
+│  └─ 08-catalyst-scenario            ← 前瞻催化剂场景推演（双场景）
+│
+├─ 💰 决策层：交易员模拟组合（串行）
+│  └─ 09-trader-portfolio             ← 50 万 RMB 模拟组合：买入/卖出/持有/现金比例/仓位变化
 │
 └─ 📝 第三层：报告撰写（串行）
-   ├─ 主笔整合 → 暗色主题 HTML 专业研报
-   └─ QQ 邮件发送
+   ├─ 10-comprehensive-writer         ← 综合分析大师整合 → HTML 报告
+   └─ scripts/send_email.py           ← QQ 邮件发送
 ```
 
 ---
@@ -78,10 +82,14 @@ cp config.example.json config.json
 ```
 
 编辑 `.env` 填入你的 API 密钥：
-- **OpenRouter** — DeepSeek Chat 直连（[注册](https://openrouter.ai/)）
-- **xAI** — Grok 用于推特搜索（[注册](https://x.ai/api)）
-- **Twitter API v2** — 推文抓取（[注册](https://developer.x.com/)）
-- **HTTP 代理** — 国内访问 xAI 需要 Clash Verge 代理
+
+| 变量 | 用途 | 获取方式 |
+|------|------|----------|
+| `XAI_API_KEY` | Grok 推特数据抓取 | [xAI API](https://x.ai/api) |
+| `OPENROUTER_API_KEY` | DeepSeek V4 Flash 通用分析 | [OpenRouter](https://openrouter.ai/) |
+| `TWITTER_BEARER_TOKEN` | X API v2 推文搜索 | [X Developer](https://developer.x.com/) |
+| `TWITTER_API_KEY` / `TWITTER_API_SECRET` | X API v2 认证 | [X Developer](https://developer.x.com/) |
+| `HTTP_PROXY` / `HTTPS_PROXY` | 国内访问 xAI 需 Clash Verge 代理 | 本地 `127.0.0.1:7897` |
 
 编辑 `config.json` 填入：
 - QQ 邮箱 + SMTP 授权码（[获取授权码](https://service.mail.qq.com/)）
@@ -96,20 +104,22 @@ pip install requests python-dotenv
 
 编辑 `requirements.md`，勾选你想研究的标的和维度。
 
+编辑 `profile.json`，填入你的真实持仓信息，交易员会基于它给出个性化建议。
+
 ### 5. 运行
 
 ```bash
-# 完整深度研究
-python scripts/run_deep_research.py
+# 完整深度研究（推荐；手动和定时任务同一入口）
+scripts\run_daily.cmd
 
 # 跳过邮件
-python scripts/run_deep_research.py --no-email
+scripts\run_daily.cmd -NoEmail
 
 # 跳过推特（X API 配额用完时）
-python scripts/run_deep_research.py --no-twitter
+scripts\run_daily.cmd -NoTwitter
 
-# 保存中间 JSON 数据便于调试
-python scripts/run_deep_research.py --save-json
+# 串行运行（不并行启动 Claude Code 任务）
+scripts\run_daily.cmd -Sequential
 ```
 
 ---
@@ -117,16 +127,20 @@ python scripts/run_deep_research.py --save-json
 ## 🔧 单次 API 调用
 
 ```bash
-# DeepSeek 通用问答
+# 通用分析（OpenRouter → DeepSeek V4 Flash）
 python scripts/grok_api.py "分析今天NVDA的走势"
 
-# Grok + X API 搜推特
-python scripts/grok_api.py --xai --search "搜 @aleabitoreddit 的推文"
+# X API 确定性抓取（只抓原始推文，不调用 AI）
+python scripts/grok_api.py --x-user bboczeng --max-results 10
+python scripts/grok_api.py --x-query "from:realDonaldTrump -is:retweet" --max-results 10
+
+# Grok + X API 搜推特（兼容旧路径）
+python scripts/grok_api.py --xai --search "搜 @aleaborteddit 的推文"
 
 # xAI Grok 直调
 python scripts/grok_api.py --xai "直接问 Grok"
 
-# 查看可用模型
+# 列出可用模型
 python scripts/grok_api.py --list-models
 ```
 
@@ -149,13 +163,14 @@ python scripts/send_email.py --subject "今日研报" --file "output/report.html
 通过 Windows 任务计划程序自动运行：
 
 ```powershell
-# 创建计划任务（每天 09:00 和 21:00）
-powershell -File scripts/create_schtask.ps1
+# 创建计划任务（每天 09:00 和 21:00，亚洲上海时区）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\create_schtask.ps1
 ```
 
 - 任务名：`mystock-daily-research`
-- 时区：`Asia/Shanghai`
-- 入口：`scripts/run_daily.ps1`
+- 触发时间：每天 `09:00` 和 `21:00`（Asia/Shanghai）
+- 入口：`scripts/run_daily.cmd`
+- 手动运行和计划任务使用同一条命令。
 
 ---
 
@@ -164,31 +179,47 @@ powershell -File scripts/create_schtask.ps1
 ```
 mystock/
 ├── requirements.md              # 📋 研究需求单 + 思考框架（编辑这个！）
-├── config.example.json          # 📧 邮件配置模板
+├── profile.json                 # 💼 用户真实持仓与账户信息
 ├── .env.example                 # 🔑 环境变量模板
+├── config.example.json          # 📧 邮件配置模板
 │
 ├── scripts/
-│   ├── run_deep_research.py     # ⚙️ 深度研究主引擎（三层递进）
+│   ├── run_daily.cmd            # 🪟 手动/计划任务统一入口
+│   ├── run_daily.ps1            # ⚙️ 独立 Claude Code 任务编排器
 │   ├── grok_api.py              # 🔌 统一 API 助手（DeepSeek/Grok/X）
 │   ├── send_email.py            # 📬 QQ 邮件发送
-│   ├── run_daily.ps1            # 🪟 计划任务入口
-│   └── create_schtask.ps1       # 🔧 创建 Windows 计划任务
+│   ├── create_schtask.ps1       # 🔧 创建 Windows 计划任务
+│   ├── create_task.bat          # 🔧 计划任务注册（备用）
+│   └── create_task.ps1          # 🔧 计划任务注册（备用）
 │
-├── prompts/deep-research/       # 🎭 提示词库（14个角色 prompt）
-│   ├── system-base.md           # 通用深度思考约束
-│   ├── sector-deep.md           # 板块深度搜索
-│   ├── stock-deep.md            # 个股深度搜索
-│   ├── macro-fundflow.md        # 宏观 + 资金面
-│   ├── crypto-deep.md           # 加密货币专项
-│   ├── bull-bear-arena.md       # 多空博弈台
-│   ├── dot-connecting.md        # 线索串联
-│   ├── catalyst-scenario.md     # 催化剂场景推演
-│   └── ...                      # 更多专项 prompt
+├── prompts/deep-research/       # 🎭 提示词库（三层架构）
+│   ├── base/                    # 基础层 — 通用深度思考约束
+│   │   └── system-base.md
+│   ├── layer1/                  # 第一层 — 专业信息采集（6 个角色）
+│   │   ├── macro-master.md      #   宏观与政策信号（含特朗普 K 线映射）
+│   │   ├── us-stock-master.md   #   美股分析大师
+│   │   ├── hk-china-master.md   #   港股/中概分析大师
+│   │   ├── a-share-master.md    #   A股分析大师
+│   │   ├── crypto-master.md     #   加密分析大师
+│   │   ├── stock-deep.md        #   标的深度分析
+│   │   ├── sector-deep.md       #   行业深度分析
+│   │   └── influencer-sentiment.md  # 大V情绪采集
+│   ├── layer2/                  # 第二层 — 深度推演（4 个角色）
+│   │   ├── bull-advocate.md     #   多方辩手
+│   │   ├── bear-advocate.md     #   空方辩手
+│   │   ├── arbiter.md           #   裁判/线索串联
+│   │   └── catalyst-scenario.md #   催化剂场景推演
+│   ├── decision/                # 决策层 — 交易员
+│   │   └── trader-portfolio.md  #   50 万 RMB 模拟组合
+│   └── writer/                  # 第三层 — 报告撰写
+│       └── comprehensive-writer.md  # 综合分析大师/主笔
 │
 ├── templates/
 │   └── deep-report.html         # 🎨 暗色主题专业研报模板
 │
 ├── memory/
+│   ├── portfolio.md             # 💰 交易员模拟组合状态
+│   ├── MEMORY.md                # 🧠 记忆索引
 │   └── thinking-patterns/       # 🧠 用户思考习惯记忆（自动注入 prompt）
 │
 └── output/                      # 📄 生成的研报（gitignore）
@@ -220,8 +251,9 @@ mystock/
 - 🧠 **聪明钱推理** — 机构在这个背景下最可能做什么
 - 🎯 **催化剂场景推演** — 上行情景 vs 下行情景
 - 📊 **标的深度分析** — 每标的含 mini bull/bear
-- 📡 **大V信号解读** — 含反向阅读（极端情绪 = 反向指标）
+- 📡 **大V 信号解读** — 含客观分析（不预设反向指标）
 - ⚠️ **风险矩阵** — 概率 × 影响程度
+- 💰 **交易员仓位** — 50 万 RMB 模拟组合、买卖动作、目标权重、仓位变化、认错条件
 - 🧭 **操作启示** — 涨 / 跌 / 横盘三场景应对
 
 ---
@@ -230,10 +262,12 @@ mystock/
 
 | 用途 | 模型 | 方式 | 价格 |
 |------|------|------|------|
-| 通用分析/预测/报告 | DeepSeek Chat | OpenRouter 直连 | ~$0.14/M 输入 |
-| 推特/X 数据搜索 | Grok 4.3 | xAI API（需代理） | ~$0.00125/M |
-| X 推文实际抓取 | 无（直接调用） | X API v2 | 免费配额 |
-| 邮件发送 | 无（直接调用） | QQ SMTP | 免费 |
+| **推特以外的最新网页信息** | Claude Code WebSearch | `scripts/run_daily.cmd` 独立 `claude --print` 任务 | 取决于 Claude Code |
+| **通用分析/预测/报告** | DeepSeek V4 Flash | OpenRouter 直连 | ~$0.10/M 输入 |
+| **X/Twitter 原始数据获取** | Grok（仅抓取，不分析） | xAI API（需代理） | 最低价模型 |
+| **邮件发送** | 无（直接调用） | QQ SMTP + 授权码 | 免费 |
+
+> **关键说明**：最新网页信息必须走 Claude Code WebSearch — 由 `run_daily.ps1` 启动多个独立 `claude --print` 任务执行第一层网页搜索，不依赖 Python 脚本联网。
 
 ---
 
@@ -243,7 +277,7 @@ mystock/
 
 - **大资金行为逻辑** — IPO 掩护出货、大宗交易异动
 - **多空博弈思维** — 每个判断必须 Bull + Bear 双面呈现
-- **大V信号反向阅读** — 极端一致预期往往是反向信号
+- **大V 信号客观解读** — 客观分析情绪方向和强度，不预设反向
 - **历史镜鉴** — 寻找历史上最相似的行情片段
 - **跨市场联动** — 美股→A股/港股传导、加密-纳斯达克相关性
 - **资金面 ≠ 基本面** — 区分短期交易逻辑 vs 中期配置逻辑
